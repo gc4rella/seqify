@@ -60,19 +60,18 @@ skinparam sequenceArrowColor #333333`,
 
 export const StyleSelector = ({ onStyleChange }: StyleSelectorProps) => {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
-      <Palette className="w-4 h-4 text-primary" />
-      <span className="text-sm font-medium text-foreground">Style:</span>
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground">--style</span>
       <Select defaultValue="default" onValueChange={(value) => {
         const style = STYLES.find(s => s.value === value);
         onStyleChange(style?.code || "");
       }}>
-        <SelectTrigger className="w-[180px] bg-secondary border-border">
-          <SelectValue placeholder="Select style" />
+        <SelectTrigger className="w-[120px] h-7 bg-background/50 border-border/50 text-xs">
+          <SelectValue placeholder="default" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-card border-border">
           {STYLES.map((style) => (
-            <SelectItem key={style.value} value={style.value}>
+            <SelectItem key={style.value} value={style.value} className="text-xs">
               {style.label}
             </SelectItem>
           ))}
