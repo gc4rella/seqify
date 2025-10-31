@@ -77,6 +77,11 @@ const Index = () => {
           <DiagramPreview plantUmlCode={plantUmlCode} style={style} />
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="py-3 text-center text-xs text-muted-foreground/60 border-t border-border/30">
+        made with love ❤️ by <a href="https://gcarella.me" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">gcarella.me</a>
+      </footer>
     </div>
   );
 };
