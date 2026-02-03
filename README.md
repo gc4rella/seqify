@@ -60,6 +60,12 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Offline + local storage
+
+- Diagram text and style are saved locally in the browser using `localStorage`.
+- The app supports offline use after the first successful load (service worker caches the app shell).
+- Clearing site data or using private browsing can remove saved content.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/e69c8842-7595-49cf-a6d8-f8a48290fca3) and click on Share -> Publish.
