@@ -23,23 +23,41 @@ const STORAGE_KEYS = {
 };
 
 const Index = () => {
-  // Load from localStorage on mount
-  const [plantUmlCode, setPlantUmlCode] = useState(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CODE);
-    return saved || DEFAULT_PLANTUML;
-  });
+  const getStoredValue = (key: string, fallback: string) => {
+    if (typeof window === "undefined") return fallback;
+    try {
+      const saved = window.localStorage.getItem(key);
+      return saved ?? fallback;
+    } catch {
+      return fallback;
+    }
+  };
 
-  const [style, setStyle] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.STYLE) || "";
-  });
+  const setStoredValue = (key: string, value: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      // Ignore storage failures (private mode, quota exceeded, etc.)
+    }
+  };
+
+  // Load from localStorage on mount
+  const [plantUmlCode, setPlantUmlCode] = useState(() =>
+    getStoredValue(STORAGE_KEYS.CODE, DEFAULT_PLANTUML)
+  );
+
+  const [style, setStyle] = useState(() =>
+    getStoredValue(STORAGE_KEYS.STYLE, "")
+  );
 
   // Auto-save to localStorage whenever code or style changes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CODE, plantUmlCode);
+    setStoredValue(STORAGE_KEYS.CODE, plantUmlCode);
   }, [plantUmlCode]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.STYLE, style);
+    setStoredValue(STORAGE_KEYS.STYLE, style);
   }, [style]);
 
   // Keyboard shortcuts
@@ -79,8 +97,10 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="py-3 text-center text-xs text-muted-foreground/60 border-t border-border/30">
-        made with love ❤️ by <a href="https://gcarella.me" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">gcarella.me</a>
+      <footer className="py-3 text-center text-xs text-muted-foreground/60 border-t border-border/30 space-y-1">
+        <div>Saved locally in your browser. No server storage.</div>
+        <div>Works offline after first load.</div>
+        <div>made with love ❤️ by <a href="https://gcarella.me" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">gcarella.me</a></div>
       </footer>
     </div>
   );

@@ -1,0 +1,17 @@
+{
+  "name": "Seqify",
+  "short_name": "Seqify",
+  "description": "A minimalistic CLI-inspired PlantUML sequence diagram renderer with live preview.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#0f1115",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
