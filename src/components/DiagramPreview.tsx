@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { encode } from "plantuml-encoder";
-import { Loader2, Download, ZoomIn, ZoomOut, Sun, Moon } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Loader2, Download, ZoomIn, ZoomOut } from "lucide-react";
 
 interface DiagramPreviewProps {
   plantUmlCode: string;
@@ -13,12 +12,6 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [zoom, setZoom] = useState(100);
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleDownload = async () => {
     if (!imageUrl) return;
@@ -92,54 +85,41 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
   return (
     <div className="h-full flex flex-col bg-preview">
       {/* Terminal-style prompt - integrated */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-4 pt-4 pb-2 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-accent text-xs">›</span>
           <h2 className="text-sm text-accent font-medium">output</h2>
           <span className="text-muted-foreground text-xs">--live</span>
-          {imageUrl && !loading && !error && (
-            <>
-              <button
-                onClick={() => setZoom(Math.max(25, zoom - 25))}
-                className="px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
-                title="Zoom out"
-              >
-                <ZoomOut className="w-3 h-3" />
-              </button>
-              <span className="text-xs text-muted-foreground px-1 min-w-[3rem] text-center border border-border/50 rounded h-7 flex items-center justify-center">
-                {zoom}%
-              </span>
-              <button
-                onClick={() => setZoom(Math.min(200, zoom + 25))}
-                className="px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
-                title="Zoom in"
-              >
-                <ZoomIn className="w-3 h-3" />
-              </button>
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
-                title="Download diagram (Ctrl+S)"
-              >
-                <Download className="w-3 h-3" />
-                <span>export</span>
-              </button>
-            </>
-          )}
-          {mounted && (
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
-              title="Toggle theme"
-            >
-              {theme === "dark" ? (
-                <Sun className="w-3 h-3" />
-              ) : (
-                <Moon className="w-3 h-3" />
-              )}
-            </button>
-          )}
         </div>
+        {imageUrl && !loading && !error && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setZoom(Math.max(25, zoom - 25))}
+              className="px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
+              title="Zoom out"
+            >
+              <ZoomOut className="w-3 h-3" />
+            </button>
+            <span className="text-xs text-muted-foreground px-1 min-w-[3rem] text-center border border-border/50 rounded h-7 flex items-center justify-center">
+              {zoom}%
+            </span>
+            <button
+              onClick={() => setZoom(Math.min(200, zoom + 25))}
+              className="px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
+              title="Zoom in"
+            >
+              <ZoomIn className="w-3 h-3" />
+            </button>
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
+              title="Download diagram (Ctrl+S)"
+            >
+              <Download className="w-3 h-3" />
+              <span>export</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Preview area */}

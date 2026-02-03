@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { CodeEditor } from "@/components/CodeEditor";
 import { DiagramPreview } from "@/components/DiagramPreview";
 import { StyleSelector } from "@/components/StyleSelector";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const DEFAULT_PLANTUML = `@startuml
 actor User
@@ -83,6 +84,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <ThemeToggle />
       {/* Main Content - Single integrated interface */}
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
         {/* Editor Panel */}
