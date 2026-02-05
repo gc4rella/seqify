@@ -4,10 +4,12 @@ import "./index.css";
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-if ("serviceWorker" in navigator) {
+if (typeof window !== "undefined") {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // Ignore registration errors (offline, unsupported, etc.)
-    });
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        // Ignore registration errors (offline, unsupported, etc.)
+      });
+    }
   });
 }

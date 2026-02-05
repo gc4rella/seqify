@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { CodeEditor } from "@/components/CodeEditor";
 import { DiagramPreview } from "@/components/DiagramPreview";
-import { StyleSelector } from "@/components/StyleSelector";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const DEFAULT_PLANTUML = `@startuml
@@ -100,8 +99,12 @@ const Index = () => {
 
       {/* Footer */}
       <footer className="py-3 text-center text-xs text-muted-foreground/60 border-t border-border/30 space-y-1">
-        <div>Saved locally in your browser. No server storage.</div>
-        <div>Works offline after first load.</div>
+        <div>Rendered locally in your browser. No server storage.</div>
+        <div>Works offline after first load (once renderer assets are cached).</div>
+        <div className="flex items-center justify-center gap-2">
+          <img src="/cheerpj-mark.svg" alt="CheerpJ" className="h-4 opacity-80" />
+          <span>Powered by CheerpJ, a Leaning Technologies Java tool</span>
+        </div>
         <div>made with love ❤️ by <a href="https://gcarella.me" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">gcarella.me</a></div>
       </footer>
     </div>

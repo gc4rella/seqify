@@ -6,6 +6,9 @@ const CORE_ASSETS = [
   "/manifest.webmanifest",
   "/favicon.ico",
   "/placeholder.svg",
+  "/og.svg",
+  "/sitemap.xml",
+  "/cheerpj-mark.svg",
 ];
 
 self.addEventListener("install", (event) => {

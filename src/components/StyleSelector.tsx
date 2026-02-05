@@ -45,16 +45,30 @@ skinparam defaultFontSize 14`,
     label: "Vibrant",
     code: `skinparam backgroundColor #f0f0f0
 skinparam participant {
-  BackgroundColor gradient {
-    #FF6B6B
-    #4ECDC4
-  }
+  BackgroundColor #FF6B6B-#4ECDC4
   BorderColor #333333
   FontColor #ffffff
   FontStyle bold
 }
 skinparam sequenceArrowThickness 2
 skinparam sequenceArrowColor #333333`,
+  },
+  {
+    value: "sketch",
+    label: "Sketch (Excalidraw)",
+    code: `!option handwritten true
+skinparam shadowing false
+skinparam backgroundColor #faf8f1
+skinparam defaultFontName "Comic Sans MS"
+skinparam defaultFontSize 14
+skinparam participant {
+  BackgroundColor #fff3e0
+  BorderColor #374151
+  FontColor #111827
+}
+skinparam sequenceMessageAlign center
+skinparam sequenceArrowColor #374151
+skinparam sequenceArrowThickness 2`,
   },
 ];
 

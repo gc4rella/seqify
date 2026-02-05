@@ -66,6 +66,19 @@ This project is built with:
 - The app supports offline use after the first successful load (service worker caches the app shell).
 - Clearing site data or using private browsing can remove saved content.
 
+## Local PlantUML rendering
+
+Seqify renders diagrams in the browser using PlantUML Core + CheerpJ (no server requests).
+
+To enable local rendering, download these files from the PlantUML Core releases and place them here:
+
+- `public/plantuml-core.jar`
+- `public/plantuml-core.jar.js`
+
+The renderer expects them to be served at `/plantuml-core.jar`.
+
+CheerpJ for PlantUML has specific licensing requirements (including displaying the Powered by CheerpJ message and logo). Review the PlantUML CheerpJ license before deploying.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/e69c8842-7595-49cf-a6d8-f8a48290fca3) and click on Share -> Publish.
