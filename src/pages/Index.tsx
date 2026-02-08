@@ -2,6 +2,14 @@ import { useState, useEffect } from "react";
 import { CodeEditor } from "@/components/CodeEditor";
 import { DiagramPreview } from "@/components/DiagramPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const DEFAULT_PLANTUML = `@startuml
 actor User
@@ -98,14 +106,76 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="py-3 text-center text-xs text-muted-foreground/60 border-t border-border/30 space-y-1">
-        <div>Rendered locally in your browser. No server storage.</div>
-        <div>Works offline after first load (once renderer assets are cached).</div>
-        <div className="flex items-center justify-center gap-2">
-          <img src="/cheerpj-mark.svg" alt="CheerpJ" className="h-4 opacity-80" />
-          <span>Powered by CheerpJ, a Leaning Technologies Java tool</span>
+      <footer className="border-t border-border/30 py-2 px-3">
+        <div className="mx-auto flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center text-[10px] sm:text-[11px] leading-tight text-muted-foreground/40">
+          {/* CheerpJ license requires this exact message + logo to be visible for end users. */}
+          <span className="inline-flex items-center gap-1.5">
+            <img src="/cheerpj-mark.svg" alt="CheerpJ" className="h-3.5 opacity-60" />
+            <a
+              href="https://cheerpj.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-muted-foreground/70 transition-colors underline-offset-4 hover:underline"
+            >
+              Powered by CheerpJ, a Leaning Technologies Java tool
+            </a>
+          </span>
+          <span className="opacity-30">•</span>
+          <Dialog>
+            <DialogTrigger asChild>
+              <button
+                type="button"
+                className="hover:text-muted-foreground/70 transition-colors underline-offset-4 hover:underline"
+              >
+                made with love ❤️
+              </button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>About Seqify</DialogTitle>
+                <DialogDescription>
+                  Seqify is intentionally designed as an offline-friendly tool that renders diagrams in your browser, with no remote processing.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <div className="space-y-1">
+                  <div className="font-medium">Privacy + offline</div>
+                  <p className="text-muted-foreground">
+                    Rendering happens locally in your browser. There is no server-side rendering and no server storage of your diagram text.
+                    After the first successful load, it can work offline once the renderer assets are cached.
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <div className="font-medium">Credits</div>
+                  <p className="text-muted-foreground">
+                    Uses PlantUML Core + CheerpJ for in-browser rendering. CheerpJ license requires the “Powered by CheerpJ, a Leaning
+                    Technologies Java tool” message and logo to be visible for end users.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Author:{" "}
+                    <a
+                      href="https://gcarella.me"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground/90 hover:text-foreground underline-offset-4 hover:underline"
+                    >
+                      gcarella.me
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          <span>by</span>
+          <a
+            href="https://gcarella.me"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-muted-foreground/70 transition-colors underline-offset-4 hover:underline"
+          >
+            gcarella.me
+          </a>
         </div>
-        <div>made with love ❤️ by <a href="https://gcarella.me" target="_blank" rel="noopener noreferrer" className="hover:text-muted-foreground transition-colors">gcarella.me</a></div>
       </footer>
     </div>
   );
