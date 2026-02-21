@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Palette } from "lucide-react";
 
 interface StyleSelectorProps {
+  style: string;
   onStyleChange: (style: string) => void;
 }
 
@@ -72,15 +72,33 @@ skinparam sequenceArrowThickness 2`,
   },
 ];
 
-export const StyleSelector = ({ onStyleChange }: StyleSelectorProps) => {
+const normalizeStyle = (value: string) => value.replace(/\r\n/g, "\n").trim();
+
+const getSelectedStyleValue = (style: string) => {
+  const normalizedCurrent = normalizeStyle(style);
+  if (!normalizedCurrent) {
+    return "default";
+  }
+
+  const matched = STYLES.find((candidate) => normalizeStyle(candidate.code) === normalizedCurrent);
+  return matched?.value ?? "custom";
+};
+
+export const StyleSelector = ({ style, onStyleChange }: StyleSelectorProps) => {
+  const selectedValue = getSelectedStyleValue(style);
+
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground">--style</span>
-      <Select defaultValue="default" onValueChange={(value) => {
-        const style = STYLES.find(s => s.value === value);
-        onStyleChange(style?.code || "");
-      }}>
-        <SelectTrigger className="w-[120px] h-7 bg-background/50 border-border/50 text-xs">
+      <Select
+        value={selectedValue}
+        onValueChange={(value) => {
+          if (value === "custom") return;
+          const selectedStyle = STYLES.find((candidate) => candidate.value === value);
+          onStyleChange(selectedStyle?.code || "");
+        }}
+      >
+        <SelectTrigger className="w-[150px] h-7 bg-background/50 border-border/50 text-xs">
           <SelectValue placeholder="default" />
         </SelectTrigger>
         <SelectContent className="bg-card border-border">
@@ -89,6 +107,9 @@ export const StyleSelector = ({ onStyleChange }: StyleSelectorProps) => {
               {style.label}
             </SelectItem>
           ))}
+          <SelectItem value="custom" disabled className="text-xs">
+            Custom (active)
+          </SelectItem>
         </SelectContent>
       </Select>
     </div>

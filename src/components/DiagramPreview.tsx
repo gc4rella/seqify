@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, ZoomOut, Maximize2, Minimize2 } from "lucide-react";
+import { Loader2, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, Copy } from "lucide-react";
 import { useTheme } from "next-themes";
 import { PLANTUML_ASSET_HINT, renderPlantumlSvg } from "@/lib/plantumlRenderer";
 import { cn } from "@/lib/utils";
@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface DiagramPreviewProps {
   plantUmlCode: string;
   style: string;
+  onStyleChange?: (style: string) => void;
 }
 
 const PLAIN_THEME_DIRECTIVE_REGEX = /^\s*!theme\s+plain(?:\s|$)/im;
@@ -18,13 +19,18 @@ const normalizePlantumlCompatibility = (input: string) =>
     .replace(/\bskinparam\s+sequenceMessageAlign\b/gi, "skinparam sequenceMessageAlignment")
     .replace(/\bskinparam\s+maxMessageSize\b/gi, "skinparam maxmessagesize");
 
-export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => {
+export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPreviewProps) => {
   const [svgMarkup, setSvgMarkup] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [zoom, setZoom] = useState(100);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [effectiveSource, setEffectiveSource] = useState("");
+  const [copiedInput, setCopiedInput] = useState(false);
   const { resolvedTheme } = useTheme();
+  const hasActiveStyle = style.trim().length > 0;
+  const errorLineMatch = error.match(/\bline[:\s]+(\d+)\b/i);
+  const errorLine = errorLineMatch ? errorLineMatch[1] : null;
 
   const getRenderMode = () => {
     const sourceWithStyle = `${plantUmlCode}\n${style}`;
@@ -66,6 +72,40 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
     return luminance < 0.45 ? "dark" : "light";
   };
 
+  const buildEffectiveSource = () => {
+    const sanitizedCode = normalizePlantumlCompatibility(plantUmlCode);
+    const sanitizedStyle = normalizePlantumlCompatibility(style);
+
+    let codeWithStyle = sanitizedCode;
+    if (sanitizedStyle.trim()) {
+      const lines = sanitizedStyle.split(/\r?\n/);
+      const preLines = lines.filter((line) => line.trim().startsWith("!"));
+      const bodyLines = lines.filter((line) => !line.trim().startsWith("!"));
+      const preamble = preLines.join("\n").trim();
+      const body = bodyLines.join("\n").trim();
+      const injectedText = [preamble, body].filter(Boolean).join("\n");
+
+      if (/@startuml/i.test(sanitizedCode)) {
+        codeWithStyle = sanitizedCode.replace(
+          /@startuml/i,
+          (match) => (injectedText ? `${match}\n${injectedText}` : match)
+        );
+      } else {
+        codeWithStyle = [preamble, sanitizedCode, body].filter(Boolean).join("\n");
+      }
+    }
+
+    return codeWithStyle;
+  };
+
+  const handleCopyEffectiveSource = async () => {
+    const source = (effectiveSource || plantUmlCode).trim();
+    if (!source) return;
+    await navigator.clipboard.writeText(source);
+    setCopiedInput(true);
+    window.setTimeout(() => setCopiedInput(false), 1500);
+  };
+
   const handleDownload = () => {
     if (!svgMarkup) return;
 
@@ -88,6 +128,7 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
     if (!plantUmlCode.trim()) {
       setSvgMarkup("");
       setError("");
+      setEffectiveSource("");
       return;
     }
 
@@ -98,29 +139,8 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
       setError("");
 
       try {
-        // Treat "!theme plain" as compatibility directive and remove it before render.
-        const sanitizedCode = normalizePlantumlCompatibility(plantUmlCode);
-        const sanitizedStyle = normalizePlantumlCompatibility(style);
-
-        // Add style to the PlantUML code if provided.
-        let codeWithStyle = sanitizedCode;
-        if (sanitizedStyle.trim()) {
-          const lines = sanitizedStyle.split(/\r?\n/);
-          const preLines = lines.filter((line) => line.trim().startsWith("!"));
-          const bodyLines = lines.filter((line) => !line.trim().startsWith("!"));
-          const preamble = preLines.join("\n").trim();
-          const body = bodyLines.join("\n").trim();
-          const injectedText = [preamble, body].filter(Boolean).join("\n");
-
-          if (/@startuml/i.test(sanitizedCode)) {
-            codeWithStyle = sanitizedCode.replace(
-              /@startuml/i,
-              (match) => (injectedText ? `${match}\n${injectedText}` : match)
-            );
-          } else {
-            codeWithStyle = [preamble, sanitizedCode, body].filter(Boolean).join("\n");
-          }
-        }
+        const codeWithStyle = buildEffectiveSource();
+        setEffectiveSource(codeWithStyle);
 
         if (/@startuml/i.test(codeWithStyle) && !/@enduml/i.test(codeWithStyle)) {
           throw new Error("Missing @enduml");
@@ -248,9 +268,44 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
         )}
         {error && (
           <div className="flex items-center justify-center h-full">
-            <div className="flex items-center gap-2">
-              <span className="text-destructive text-xs">✗</span>
-              <p className="text-destructive text-sm">{error}</p>
+            <div className="w-full max-w-3xl space-y-3 rounded border border-destructive/30 bg-destructive/5 p-4">
+              <div className="flex items-start gap-2">
+                <span className="text-destructive text-xs">✗</span>
+                <p className="text-destructive text-sm">{error}</p>
+              </div>
+              {hasActiveStyle && (
+                <p className="text-xs text-muted-foreground">
+                  An active style block is merged into your diagram before rendering.
+                </p>
+              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleCopyEffectiveSource}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>{copiedInput ? "copied" : "copy renderer input"}</span>
+                </button>
+                {hasActiveStyle && onStyleChange && (
+                  <button
+                    onClick={() => onStyleChange("")}
+                    className="px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
+                  >
+                    clear active style
+                  </button>
+                )}
+                {errorLine && (
+                  <span className="text-xs text-muted-foreground">reported line: {errorLine}</span>
+                )}
+              </div>
+              <details className="rounded border border-border/40 bg-black/20">
+                <summary className="cursor-pointer px-3 py-2 text-xs text-muted-foreground">
+                  show renderer input
+                </summary>
+                <pre className="max-h-56 overflow-auto px-3 pb-3 text-[11px] leading-5 text-foreground/80 whitespace-pre-wrap">
+                  {effectiveSource || plantUmlCode}
+                </pre>
+              </details>
             </div>
           </div>
         )}

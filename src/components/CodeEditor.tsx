@@ -73,7 +73,7 @@ export const CodeEditor = ({ value, onChange, style, onStyleChange }: CodeEditor
           <span className="text-primary text-xs">$</span>
           <h1 className="text-sm text-primary font-medium">seqify</h1>
           <span className="text-muted-foreground text-xs">--render</span>
-          <StyleSelector onStyleChange={onStyleChange} />
+          <StyleSelector style={style} onStyleChange={onStyleChange} />
           <TemplateSelector onTemplateSelect={onChange} currentCode={value} />
         </div>
         <div className="flex items-center gap-2 flex-wrap">

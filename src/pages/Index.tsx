@@ -101,7 +101,7 @@ const Index = () => {
             <CodeEditor value={plantUmlCode} onChange={setPlantUmlCode} style={style} onStyleChange={setStyle} />
           </div>
           <div className="flex-1 min-h-0">
-            <DiagramPreview plantUmlCode={plantUmlCode} style={style} />
+            <DiagramPreview plantUmlCode={plantUmlCode} style={style} onStyleChange={setStyle} />
           </div>
         </div>
 
@@ -119,7 +119,7 @@ const Index = () => {
           <ResizableHandle withHandle className="bg-border/30 hover:bg-border/60 transition-colors cursor-col-resize" />
           <ResizablePanel defaultSize={50} minSize={25}>
             <div className="h-full min-h-0">
-              <DiagramPreview plantUmlCode={plantUmlCode} style={style} />
+              <DiagramPreview plantUmlCode={plantUmlCode} style={style} onStyleChange={setStyle} />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
