@@ -1,21 +1,38 @@
 import { useEffect, useState } from "react";
-import { Loader2, Download, ZoomIn, ZoomOut } from "lucide-react";
+import { Loader2, Download, ZoomIn, ZoomOut, Maximize2, Minimize2 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { PLANTUML_ASSET_HINT, renderPlantumlSvg } from "@/lib/plantumlRenderer";
+import { cn } from "@/lib/utils";
 
 interface DiagramPreviewProps {
   plantUmlCode: string;
   style: string;
 }
 
+const PLAIN_THEME_DIRECTIVE_REGEX = /^\s*!theme\s+plain(?:\s|$)/im;
+const PLAIN_THEME_DIRECTIVE_LINE_REGEX = /^\s*!theme\s+plain(?:\s|$).*$/gim;
+
+const stripPlainThemeDirective = (input: string) => input.replace(PLAIN_THEME_DIRECTIVE_LINE_REGEX, "");
+const normalizePlantumlCompatibility = (input: string) =>
+  stripPlainThemeDirective(input)
+    .replace(/\bskinparam\s+sequenceMessageAlign\b/gi, "skinparam sequenceMessageAlignment")
+    .replace(/\bskinparam\s+maxMessageSize\b/gi, "skinparam maxmessagesize");
+
 export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => {
   const [svgMarkup, setSvgMarkup] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [zoom, setZoom] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const { resolvedTheme } = useTheme();
 
   const getRenderMode = () => {
+    const sourceWithStyle = `${plantUmlCode}\n${style}`;
+    if (PLAIN_THEME_DIRECTIVE_REGEX.test(sourceWithStyle)) {
+      // PlantUML "plain" theme expects light mode colors.
+      return "light";
+    }
+
     const trimmedStyle = style.trim();
     if (!trimmedStyle) {
       return resolvedTheme === "dark" ? "dark" : "light";
@@ -81,20 +98,32 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
       setError("");
 
       try {
-        // Add style to the PlantUML code if not already present
-        let codeWithStyle = plantUmlCode;
-        if (style && !plantUmlCode.includes("skinparam")) {
-          const lines = style.split(/\r?\n/);
+        // Treat "!theme plain" as compatibility directive and remove it before render.
+        const sanitizedCode = normalizePlantumlCompatibility(plantUmlCode);
+        const sanitizedStyle = normalizePlantumlCompatibility(style);
+
+        // Add style to the PlantUML code if provided.
+        let codeWithStyle = sanitizedCode;
+        if (sanitizedStyle.trim()) {
+          const lines = sanitizedStyle.split(/\r?\n/);
           const preLines = lines.filter((line) => line.trim().startsWith("!"));
           const bodyLines = lines.filter((line) => !line.trim().startsWith("!"));
           const preamble = preLines.join("\n").trim();
           const body = bodyLines.join("\n").trim();
+          const injectedText = [preamble, body].filter(Boolean).join("\n");
 
-          codeWithStyle = plantUmlCode.replace(/@startuml/i, (match) => {
-            const preText = preamble ? `${preamble}\n` : "";
-            const bodyText = body ? `\n${body}` : "";
-            return `${preText}${match}${bodyText}`;
-          });
+          if (/@startuml/i.test(sanitizedCode)) {
+            codeWithStyle = sanitizedCode.replace(
+              /@startuml/i,
+              (match) => (injectedText ? `${match}\n${injectedText}` : match)
+            );
+          } else {
+            codeWithStyle = [preamble, sanitizedCode, body].filter(Boolean).join("\n");
+          }
+        }
+
+        if (/@startuml/i.test(codeWithStyle) && !/@enduml/i.test(codeWithStyle)) {
+          throw new Error("Missing @enduml");
         }
 
         const mode = getRenderMode();
@@ -135,8 +164,32 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
     return () => window.removeEventListener('seqify-download', handleDownloadEvent);
   }, [svgMarkup]);
 
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsFullscreen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isFullscreen]);
+
   return (
-    <div className="h-full flex flex-col bg-preview">
+    <div
+      className={cn(
+        "h-full flex flex-col bg-preview",
+        isFullscreen && "fixed inset-0 z-[70] bg-background"
+      )}
+    >
       {/* Terminal-style prompt - integrated */}
       <div className="px-4 pt-4 pb-2 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
@@ -171,12 +224,20 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
               <Download className="w-3 h-3" />
               <span>export</span>
             </button>
+            <button
+              onClick={() => setIsFullscreen((value) => !value)}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-accent transition-colors border border-border/50 rounded h-7"
+              title={isFullscreen ? "Exit full screen (Esc)" : "View full screen"}
+            >
+              {isFullscreen ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
+              <span>{isFullscreen ? "exit" : "full"}</span>
+            </button>
           </div>
         )}
       </div>
 
       {/* Preview area */}
-      <div className="flex-1 p-4 overflow-auto">
+      <div className={cn("flex-1 p-4 overflow-auto", isFullscreen && "p-6")}>
         {loading && (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-3">
@@ -195,7 +256,7 @@ export const DiagramPreview = ({ plantUmlCode, style }: DiagramPreviewProps) => 
         )}
         {!loading && !error && svgMarkup && (
           <div className="flex items-start justify-center h-full">
-            <div className="inline-block p-6 bg-black/20 rounded border border-border/30">
+            <div className={cn("inline-block p-6 bg-black/20 rounded border border-border/30", isFullscreen && "p-8")}>
               <div
                 className="max-w-full h-auto plantuml-svg"
                 style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}

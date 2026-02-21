@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { CodeEditor } from "@/components/CodeEditor";
 import { DiagramPreview } from "@/components/DiagramPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
   Dialog,
   DialogContent,
@@ -90,23 +91,42 @@ const Index = () => {
   }, [plantUmlCode]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       <ThemeToggle />
       {/* Main Content - Single integrated interface */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
-        {/* Editor Panel */}
-        <div className="border-r border-border/30">
-          <CodeEditor value={plantUmlCode} onChange={setPlantUmlCode} style={style} onStyleChange={setStyle} />
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {/* Mobile layout */}
+        <div className="md:hidden h-full min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 border-b border-border/30">
+            <CodeEditor value={plantUmlCode} onChange={setPlantUmlCode} style={style} onStyleChange={setStyle} />
+          </div>
+          <div className="flex-1 min-h-0">
+            <DiagramPreview plantUmlCode={plantUmlCode} style={style} />
+          </div>
         </div>
 
-        {/* Preview Panel */}
-        <div>
-          <DiagramPreview plantUmlCode={plantUmlCode} style={style} />
-        </div>
+        {/* Desktop layout with draggable center divider */}
+        <ResizablePanelGroup
+          direction="horizontal"
+          autoSaveId="seqify-main-layout"
+          className="hidden md:flex h-full min-h-0"
+        >
+          <ResizablePanel defaultSize={50} minSize={25}>
+            <div className="h-full min-h-0">
+              <CodeEditor value={plantUmlCode} onChange={setPlantUmlCode} style={style} onStyleChange={setStyle} />
+            </div>
+          </ResizablePanel>
+          <ResizableHandle withHandle className="bg-border/30 hover:bg-border/60 transition-colors cursor-col-resize" />
+          <ResizablePanel defaultSize={50} minSize={25}>
+            <div className="h-full min-h-0">
+              <DiagramPreview plantUmlCode={plantUmlCode} style={style} />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-border/30 py-2 px-3">
+      <footer className="shrink-0 border-t border-border/30 py-2 px-3">
         <div className="mx-auto flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-center text-[10px] sm:text-[11px] leading-tight text-muted-foreground/40">
           {/* CheerpJ license requires this exact message + logo to be visible for end users. */}
           <span className="inline-flex items-center gap-1.5">
