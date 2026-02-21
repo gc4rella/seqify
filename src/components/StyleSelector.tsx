@@ -56,7 +56,7 @@ skinparam sequenceArrowColor #333333`,
   {
     value: "sketch",
     label: "Sketch (Excalidraw)",
-    code: `!option handwritten true
+    code: `skinparam handwritten true
 skinparam shadowing false
 skinparam backgroundColor #faf8f1
 skinparam defaultFontName "Comic Sans MS"
@@ -72,7 +72,13 @@ skinparam sequenceArrowThickness 2`,
   },
 ];
 
-const normalizeStyle = (value: string) => value.replace(/\r\n/g, "\n").trim();
+const normalizeStyle = (value: string) =>
+  value
+    .replace(/\r\n/g, "\n")
+    .replace(/^\s*!option\s+handwritten\s+true\s*$/gim, "skinparam handwritten true")
+    .replace(/\bskinparam\s+sequenceMessageAlign\b/gi, "skinparam sequenceMessageAlignment")
+    .replace(/\bskinparam\s+maxMessageSize\b/gi, "skinparam maxmessagesize")
+    .trim();
 
 const getSelectedStyleValue = (style: string) => {
   const normalizedCurrent = normalizeStyle(style);
@@ -86,6 +92,7 @@ const getSelectedStyleValue = (style: string) => {
 
 export const StyleSelector = ({ style, onStyleChange }: StyleSelectorProps) => {
   const selectedValue = getSelectedStyleValue(style);
+  const hasCustomStyle = selectedValue === "custom";
 
   return (
     <div className="flex items-center gap-2">
@@ -107,9 +114,11 @@ export const StyleSelector = ({ style, onStyleChange }: StyleSelectorProps) => {
               {style.label}
             </SelectItem>
           ))}
-          <SelectItem value="custom" disabled className="text-xs">
-            Custom (active)
-          </SelectItem>
+          {hasCustomStyle && (
+            <SelectItem value="custom" disabled className="text-xs">
+              Custom (imported)
+            </SelectItem>
+          )}
         </SelectContent>
       </Select>
     </div>

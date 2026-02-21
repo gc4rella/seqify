@@ -16,6 +16,7 @@ const PLAIN_THEME_DIRECTIVE_LINE_REGEX = /^\s*!theme\s+plain(?:\s|$).*$/gim;
 const stripPlainThemeDirective = (input: string) => input.replace(PLAIN_THEME_DIRECTIVE_LINE_REGEX, "");
 const normalizePlantumlCompatibility = (input: string) =>
   stripPlainThemeDirective(input)
+    .replace(/^\s*!option\s+handwritten\s+true\s*$/gim, "skinparam handwritten true")
     .replace(/\bskinparam\s+sequenceMessageAlign\b/gi, "skinparam sequenceMessageAlignment")
     .replace(/\bskinparam\s+maxMessageSize\b/gi, "skinparam maxmessagesize");
 
