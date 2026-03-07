@@ -4,6 +4,13 @@ import { DiagramPreview } from "@/components/DiagramPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import {
+  DEFAULT_DIAGRAM_TYPE,
+  detectDiagramType,
+  getDefaultDiagramCode,
+  isDiagramType,
+  type DiagramType,
+} from "@/lib/diagramType";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -12,33 +19,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-const DEFAULT_PLANTUML = `@startuml
-actor User
-participant "Frontend" as FE
-participant "Backend" as BE
-database "Database" as DB
-
-User -> FE: Open App
-FE -> BE: GET /api/data
-BE -> DB: Query Data
-DB -> BE: Return Results
-BE -> FE: JSON Response
-FE -> User: Display Data
-@enduml`;
-
 const STORAGE_KEYS = {
-  CODE: 'seqify-plantuml-code',
-  STYLE: 'seqify-style',
+  CODE: "seqify-diagram-code",
+  LEGACY_CODE: "seqify-plantuml-code",
+  STYLE: "seqify-style",
+  DIAGRAM_TYPE: "seqify-diagram-type",
 };
 
 const Index = () => {
-  const getStoredValue = (key: string, fallback: string) => {
-    if (typeof window === "undefined") return fallback;
+  const getStoredValue = (key: string) => {
+    if (typeof window === "undefined") return null;
     try {
-      const saved = window.localStorage.getItem(key);
-      return saved ?? fallback;
+      return window.localStorage.getItem(key);
     } catch {
-      return fallback;
+      return null;
     }
   };
 
@@ -51,44 +45,67 @@ const Index = () => {
     }
   };
 
+  const getStoredDiagramType = (): DiagramType => {
+    const saved = getStoredValue(STORAGE_KEYS.DIAGRAM_TYPE);
+    return isDiagramType(saved) ? saved : DEFAULT_DIAGRAM_TYPE;
+  };
+
+  const getStoredCode = () => {
+    const savedCode = getStoredValue(STORAGE_KEYS.CODE);
+    if (savedCode !== null) return savedCode;
+
+    // Keep compatibility with users that already stored PlantUML under the previous key.
+    const legacyCode = getStoredValue(STORAGE_KEYS.LEGACY_CODE);
+    return legacyCode ?? getDefaultDiagramCode(DEFAULT_DIAGRAM_TYPE);
+  };
+
   // Load from localStorage on mount
-  const [plantUmlCode, setPlantUmlCode] = useState(() =>
-    getStoredValue(STORAGE_KEYS.CODE, DEFAULT_PLANTUML)
+  const [diagramCode, setDiagramCode] = useState(getStoredCode);
+  const [diagramType, setDiagramType] = useState<DiagramType>(() =>
+    detectDiagramType(getStoredCode(), getStoredDiagramType())
   );
+  const [style, setStyle] = useState(() => getStoredValue(STORAGE_KEYS.STYLE) ?? "");
 
-  const [style, setStyle] = useState(() =>
-    getStoredValue(STORAGE_KEYS.STYLE, "")
-  );
-
-  // Auto-save to localStorage whenever code or style changes
   useEffect(() => {
-    setStoredValue(STORAGE_KEYS.CODE, plantUmlCode);
-  }, [plantUmlCode]);
+    const detected = detectDiagramType(diagramCode, diagramType);
+    if (detected !== diagramType) {
+      setDiagramType(detected);
+    }
+  }, [diagramCode, diagramType]);
+
+  // Auto-save to localStorage whenever code, style, or type changes
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.CODE, diagramCode);
+  }, [diagramCode]);
 
   useEffect(() => {
     setStoredValue(STORAGE_KEYS.STYLE, style);
   }, [style]);
 
+  useEffect(() => {
+    setStoredValue(STORAGE_KEYS.DIAGRAM_TYPE, diagramType);
+  }, [diagramType]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl/Cmd + S - Download diagram (prevent default save)
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
         e.preventDefault();
         // Trigger download by dispatching custom event
-        window.dispatchEvent(new CustomEvent('seqify-download'));
+        window.dispatchEvent(new CustomEvent("seqify-download"));
       }
 
       // Ctrl/Cmd + Shift + C - Copy code
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "C") {
         e.preventDefault();
-        navigator.clipboard.writeText(plantUmlCode);
+        navigator.clipboard.writeText(diagramCode);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [plantUmlCode]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [diagramCode]);
 
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
@@ -98,10 +115,21 @@ const Index = () => {
         {/* Mobile layout */}
         <div className="md:hidden h-full min-h-0 flex flex-col">
           <div className="flex-1 min-h-0 border-b border-border/30">
-            <CodeEditor value={plantUmlCode} onChange={setPlantUmlCode} style={style} onStyleChange={setStyle} />
+            <CodeEditor
+              value={diagramCode}
+              onChange={setDiagramCode}
+              style={style}
+              onStyleChange={setStyle}
+              diagramType={diagramType}
+            />
           </div>
           <div className="flex-1 min-h-0">
-            <DiagramPreview plantUmlCode={plantUmlCode} style={style} onStyleChange={setStyle} />
+            <DiagramPreview
+              diagramCode={diagramCode}
+              diagramType={diagramType}
+              style={style}
+              onStyleChange={setStyle}
+            />
           </div>
         </div>
 
@@ -113,13 +141,24 @@ const Index = () => {
         >
           <ResizablePanel defaultSize={50} minSize={25}>
             <div className="h-full min-h-0">
-              <CodeEditor value={plantUmlCode} onChange={setPlantUmlCode} style={style} onStyleChange={setStyle} />
+              <CodeEditor
+                value={diagramCode}
+                onChange={setDiagramCode}
+                style={style}
+                onStyleChange={setStyle}
+                diagramType={diagramType}
+              />
             </div>
           </ResizablePanel>
           <ResizableHandle withHandle className="bg-border/30 hover:bg-border/60 transition-colors cursor-col-resize" />
           <ResizablePanel defaultSize={50} minSize={25}>
             <div className="h-full min-h-0">
-              <DiagramPreview plantUmlCode={plantUmlCode} style={style} onStyleChange={setStyle} />
+              <DiagramPreview
+                diagramCode={diagramCode}
+                diagramType={diagramType}
+                style={style}
+                onStyleChange={setStyle}
+              />
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -171,6 +210,7 @@ const Index = () => {
                     Uses PlantUML Core + CheerpJ for in-browser rendering. CheerpJ license requires the “Powered by CheerpJ, a Leaning
                     Technologies Java tool” message and logo to be visible for end users.
                   </p>
+                  <p className="text-muted-foreground">Uses Mermaid for client-side Mermaid diagram rendering.</p>
                   <p className="text-muted-foreground">
                     Author:{" "}
                     <a

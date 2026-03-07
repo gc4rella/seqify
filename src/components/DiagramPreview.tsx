@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, Download, ZoomIn, ZoomOut, Maximize2, Minimize2, Copy } from "lucide-react";
 import { useTheme } from "next-themes";
 import { PLANTUML_ASSET_HINT, renderPlantumlSvg } from "@/lib/plantumlRenderer";
+import { renderMermaidSvg } from "@/lib/mermaidRenderer";
 import { cn } from "@/lib/utils";
+import type { DiagramType } from "@/lib/diagramType";
 
 interface DiagramPreviewProps {
-  plantUmlCode: string;
+  diagramCode: string;
+  diagramType: DiagramType;
   style: string;
   onStyleChange?: (style: string) => void;
 }
@@ -20,7 +23,12 @@ const normalizePlantumlCompatibility = (input: string) =>
     .replace(/\bskinparam\s+sequenceMessageAlign\b/gi, "skinparam sequenceMessageAlignment")
     .replace(/\bskinparam\s+maxMessageSize\b/gi, "skinparam maxmessagesize");
 
-export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPreviewProps) => {
+export const DiagramPreview = ({
+  diagramCode,
+  diagramType,
+  style,
+  onStyleChange,
+}: DiagramPreviewProps) => {
   const [svgMarkup, setSvgMarkup] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
@@ -29,12 +37,17 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
   const [effectiveSource, setEffectiveSource] = useState("");
   const [copiedInput, setCopiedInput] = useState(false);
   const { resolvedTheme } = useTheme();
-  const hasActiveStyle = style.trim().length > 0;
+  const isPlantuml = diagramType === "plantuml";
+  const hasActiveStyle = isPlantuml && style.trim().length > 0;
   const errorLineMatch = error.match(/\bline[:\s]+(\d+)\b/i);
   const errorLine = errorLineMatch ? errorLineMatch[1] : null;
 
-  const getRenderMode = () => {
-    const sourceWithStyle = `${plantUmlCode}\n${style}`;
+  const getRenderMode = useCallback(() => {
+    if (!isPlantuml) {
+      return resolvedTheme === "dark" ? "dark" : "light";
+    }
+
+    const sourceWithStyle = `${diagramCode}\n${style}`;
     if (PLAIN_THEME_DIRECTIVE_REGEX.test(sourceWithStyle)) {
       // PlantUML "plain" theme expects light mode colors.
       return "light";
@@ -71,10 +84,10 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
     const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
     return luminance < 0.45 ? "dark" : "light";
-  };
+  }, [diagramCode, isPlantuml, resolvedTheme, style]);
 
-  const buildEffectiveSource = () => {
-    const sanitizedCode = normalizePlantumlCompatibility(plantUmlCode);
+  const buildEffectiveSource = useCallback(() => {
+    const sanitizedCode = normalizePlantumlCompatibility(diagramCode);
     const sanitizedStyle = normalizePlantumlCompatibility(style);
 
     let codeWithStyle = sanitizedCode;
@@ -97,17 +110,17 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
     }
 
     return codeWithStyle;
-  };
+  }, [diagramCode, style]);
 
   const handleCopyEffectiveSource = async () => {
-    const source = (effectiveSource || plantUmlCode).trim();
+    const source = (effectiveSource || diagramCode).trim();
     if (!source) return;
     await navigator.clipboard.writeText(source);
     setCopiedInput(true);
     window.setTimeout(() => setCopiedInput(false), 1500);
   };
 
-  const handleDownload = () => {
+  const handleDownload = useCallback(() => {
     if (!svgMarkup) return;
 
     try {
@@ -123,10 +136,10 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
     } catch (err) {
       console.error("Download failed:", err);
     }
-  };
+  }, [svgMarkup]);
 
   useEffect(() => {
-    if (!plantUmlCode.trim()) {
+    if (!diagramCode.trim()) {
       setSvgMarkup("");
       setError("");
       setEffectiveSource("");
@@ -140,24 +153,34 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
       setError("");
 
       try {
-        const codeWithStyle = buildEffectiveSource();
-        setEffectiveSource(codeWithStyle);
+        const mode = getRenderMode();
 
-        if (/@startuml/i.test(codeWithStyle) && !/@enduml/i.test(codeWithStyle)) {
-          throw new Error("Missing @enduml");
+        if (isPlantuml) {
+          const codeWithStyle = buildEffectiveSource();
+          setEffectiveSource(codeWithStyle);
+
+          if (/@startuml/i.test(codeWithStyle) && !/@enduml/i.test(codeWithStyle)) {
+            throw new Error("Missing @enduml");
+          }
+
+          const svg = await renderPlantumlSvg(codeWithStyle, mode);
+          if (cancelled) return;
+          setSvgMarkup(svg);
+          return;
         }
 
-        const mode = getRenderMode();
-        const svg = await renderPlantumlSvg(codeWithStyle, mode);
+        setEffectiveSource(diagramCode);
+        const svg = await renderMermaidSvg(diagramCode, mode);
         if (cancelled) return;
         setSvgMarkup(svg);
       } catch (err) {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : "Failed to render diagram";
         const needsHint =
-          message.includes("CheerpJ") ||
-          message.includes("plantuml-core.jar") ||
-          message.includes("Failed to load");
+          isPlantuml &&
+          (message.includes("CheerpJ") ||
+            message.includes("plantuml-core.jar") ||
+            message.includes("Failed to load"));
         setError(needsHint ? `${message} ${PLANTUML_ASSET_HINT}` : message);
         setSvgMarkup("");
       } finally {
@@ -173,7 +196,7 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [plantUmlCode, style, resolvedTheme]);
+  }, [buildEffectiveSource, diagramCode, diagramType, getRenderMode, isPlantuml, resolvedTheme, style]);
 
   // Listen for keyboard shortcut download event
   useEffect(() => {
@@ -181,9 +204,9 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
       handleDownload();
     };
 
-    window.addEventListener('seqify-download', handleDownloadEvent);
-    return () => window.removeEventListener('seqify-download', handleDownloadEvent);
-  }, [svgMarkup]);
+    window.addEventListener("seqify-download", handleDownloadEvent);
+    return () => window.removeEventListener("seqify-download", handleDownloadEvent);
+  }, [handleDownload]);
 
   useEffect(() => {
     if (!isFullscreen) return;
@@ -304,7 +327,7 @@ export const DiagramPreview = ({ plantUmlCode, style, onStyleChange }: DiagramPr
                   show renderer input
                 </summary>
                 <pre className="max-h-56 overflow-auto px-3 pb-3 text-[11px] leading-5 text-foreground/80 whitespace-pre-wrap">
-                  {effectiveSource || plantUmlCode}
+                  {effectiveSource || diagramCode}
                 </pre>
               </details>
             </div>

@@ -1,16 +1,36 @@
-import { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useMemo, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { DiagramType } from "@/lib/diagramType";
 
 interface TemplateSelectorProps {
   onTemplateSelect: (template: string) => void;
   currentCode: string;
+  activeDiagramType: DiagramType;
 }
 
-const TEMPLATES = [
-  {
-    value: "api-flow",
-    label: "API Flow",
-    code: `@startuml
+interface TemplateOption {
+  value: string;
+  label: string;
+  code: string;
+}
+
+const NO_TEMPLATE_SELECTED = "__none__";
+
+const TEMPLATE_GROUPS: Record<DiagramType, TemplateOption[]> = {
+  plantuml: [
+    {
+      value: "api-flow",
+      label: "API Flow",
+      code: `@startuml
 actor User
 participant "Frontend" as FE
 participant "Backend" as BE
@@ -23,11 +43,11 @@ DB -> BE: Return Results
 BE -> FE: JSON Response
 FE -> User: Display Data
 @enduml`,
-  },
-  {
-    value: "auth",
-    label: "Authentication",
-    code: `@startuml
+    },
+    {
+      value: "auth",
+      label: "Authentication",
+      code: `@startuml
 actor User
 participant "Client" as C
 participant "Auth Server" as AS
@@ -43,11 +63,11 @@ AS -> API: Token Valid
 API -> C: Protected Resource
 C -> User: Display Data
 @enduml`,
-  },
-  {
-    value: "microservices",
-    label: "Microservices",
-    code: `@startuml
+    },
+    {
+      value: "microservices",
+      label: "Microservices",
+      code: `@startuml
 participant "API Gateway" as GW
 participant "User Service" as US
 participant "Order Service" as OS
@@ -67,11 +87,11 @@ OS -> ODB: Save Order
 ODB -> OS: Order Saved
 OS -> GW: Order Confirmed
 @enduml`,
-  },
-  {
-    value: "websocket",
-    label: "WebSocket Chat",
-    code: `@startuml
+    },
+    {
+      value: "websocket",
+      label: "WebSocket Chat",
+      code: `@startuml
 actor "User A" as UA
 actor "User B" as UB
 participant "WebSocket Server" as WS
@@ -90,22 +110,125 @@ WS -> UA: Forward Reply
 UA -> WS: Disconnect
 WS -> UA: Connection Closed
 @enduml`,
-  },
-  {
-    value: "simple",
-    label: "Simple Example",
-    code: `@startuml
+    },
+    {
+      value: "simple",
+      label: "Simple Example",
+      code: `@startuml
 Alice -> Bob: Hello Bob!
 Bob -> Alice: Hi Alice!
 Alice -> Bob: How are you?
 Bob -> Alice: I'm good, thanks!
 @enduml`,
-  },
-];
+    },
+  ],
+  mermaid: [
+    {
+      value: "sequence",
+      label: "Sequence",
+      code: `sequenceDiagram
+actor User
+participant FE as Frontend
+participant API as API Server
+participant DB as Database
 
-export const TemplateSelector = ({ onTemplateSelect, currentCode }: TemplateSelectorProps) => {
-  const [selected, setSelected] = useState<string | undefined>(undefined);
-  const [pendingTemplate, setPendingTemplate] = useState<(typeof TEMPLATES)[number] | null>(null);
+User->>FE: Open dashboard
+FE->>API: GET /dashboard
+API->>DB: Query widgets
+DB-->>API: Widgets data
+API-->>FE: JSON response
+FE-->>User: Render dashboard`,
+    },
+    {
+      value: "flowchart",
+      label: "Flowchart",
+      code: `flowchart TD
+Start([Start]) --> Validate{Valid request?}
+Validate -- No --> Reject[Return 400]
+Validate -- Yes --> Process[Process command]
+Process --> Persist[(Save in DB)]
+Persist --> Notify[Publish event]
+Notify --> Done([Done])`,
+    },
+    {
+      value: "state",
+      label: "State Machine",
+      code: `stateDiagram-v2
+[*] --> Idle
+Idle --> Loading: fetch()
+Loading --> Success: resolve
+Loading --> Error: reject
+Error --> Loading: retry
+Success --> Idle: reset`,
+    },
+    {
+      value: "class",
+      label: "Class Diagram",
+      code: `classDiagram
+class User {
+  +id: string
+  +email: string
+  +verifyPassword(password): boolean
+}
+class Session {
+  +token: string
+  +expiresAt: Date
+}
+class AuthService {
+  +login(email, password): Session
+  +logout(token): void
+}
+
+User "1" --> "many" Session : owns
+AuthService ..> User : validates`,
+    },
+    {
+      value: "journey",
+      label: "User Journey",
+      code: `journey
+title Checkout Journey
+section Browse
+  Open store: 5: User
+  Search product: 4: User
+section Purchase
+  Add to cart: 5: User
+  Complete payment: 3: User, Gateway
+section Post-purchase
+  Receive confirmation: 5: User`,
+    },
+  ],
+};
+
+const toSelectValue = (diagramType: DiagramType, templateId: string) => `${diagramType}:${templateId}`;
+
+const fromSelectValue = (value: string): { diagramType: DiagramType; templateId: string } | null => {
+  const [diagramType, templateId] = value.split(":");
+  if ((diagramType !== "plantuml" && diagramType !== "mermaid") || !templateId) return null;
+  return { diagramType, templateId };
+};
+
+export const TemplateSelector = ({
+  onTemplateSelect,
+  currentCode,
+  activeDiagramType,
+}: TemplateSelectorProps) => {
+  const [selected, setSelected] = useState<string>(NO_TEMPLATE_SELECTED);
+  const [pendingTemplate, setPendingTemplate] = useState<{
+    template: TemplateOption;
+    diagramType: DiagramType;
+  } | null>(null);
+  const orderedGroups = useMemo<DiagramType[]>(
+    () => (activeDiagramType === "mermaid" ? ["mermaid", "plantuml"] : ["plantuml", "mermaid"]),
+    [activeDiagramType]
+  );
+  const selectedLabel = useMemo(() => {
+    const parsed = fromSelectValue(selected);
+    if (!parsed) return "examples";
+    const template = TEMPLATE_GROUPS[parsed.diagramType].find(
+      (candidate) => candidate.value === parsed.templateId
+    );
+    return template?.label ?? "examples";
+  }, [selected]);
 
   return (
     <div className="flex items-center gap-2">
@@ -113,12 +236,17 @@ export const TemplateSelector = ({ onTemplateSelect, currentCode }: TemplateSele
       <Select
         value={selected}
         onValueChange={(value) => {
-          const template = TEMPLATES.find((t) => t.value === value);
+          const parsed = fromSelectValue(value);
+          if (!parsed) return;
+
+          const template = TEMPLATE_GROUPS[parsed.diagramType].find(
+            (candidate) => candidate.value === parsed.templateId
+          );
           if (!template) return;
 
           const wouldOverwrite = currentCode.trim().length > 0 && currentCode !== template.code;
           if (wouldOverwrite) {
-            setPendingTemplate(template);
+            setPendingTemplate({ template, diagramType: parsed.diagramType });
             return;
           }
 
@@ -126,14 +254,29 @@ export const TemplateSelector = ({ onTemplateSelect, currentCode }: TemplateSele
           setSelected(value);
         }}
       >
-        <SelectTrigger className="w-[120px] h-7 bg-background/50 border-border/50 text-xs">
-          <SelectValue placeholder="examples" />
+        <SelectTrigger className="w-[148px] h-7 bg-background/50 border-border/50 text-xs">
+          <SelectValue>{selectedLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent className="bg-card border-border">
-          {TEMPLATES.map((template) => (
-            <SelectItem key={template.value} value={template.value} className="text-xs">
-              {template.label}
-            </SelectItem>
+          <SelectItem value={NO_TEMPLATE_SELECTED} className="hidden" disabled>
+            examples
+          </SelectItem>
+          {orderedGroups.map((diagramType, index) => (
+            <SelectGroup key={diagramType}>
+              <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground/80">
+                {diagramType}
+              </SelectLabel>
+              {TEMPLATE_GROUPS[diagramType].map((template) => (
+                <SelectItem
+                  key={toSelectValue(diagramType, template.value)}
+                  value={toSelectValue(diagramType, template.value)}
+                  className="text-xs"
+                >
+                  {template.label}
+                </SelectItem>
+              ))}
+              {index < orderedGroups.length - 1 && <SelectSeparator />}
+            </SelectGroup>
           ))}
         </SelectContent>
       </Select>
@@ -147,7 +290,7 @@ export const TemplateSelector = ({ onTemplateSelect, currentCode }: TemplateSele
             </div>
             <div className="mt-3 text-sm text-foreground">Replace current diagram?</div>
             <div className="mt-1 text-xs text-muted-foreground">
-              This will overwrite your current content.
+              This will apply the {pendingTemplate.diagramType} template and overwrite your current content.
             </div>
             <div className="mt-4 flex items-center justify-end gap-2">
               <button
@@ -159,8 +302,9 @@ export const TemplateSelector = ({ onTemplateSelect, currentCode }: TemplateSele
               <button
                 className="h-8 rounded border border-primary/60 bg-primary/10 px-3 text-xs text-primary hover:bg-primary/20 transition-colors"
                 onClick={() => {
-                  onTemplateSelect(pendingTemplate.code);
-                  setSelected(pendingTemplate.value);
+                  const nextValue = toSelectValue(pendingTemplate.diagramType, pendingTemplate.template.value);
+                  onTemplateSelect(pendingTemplate.template.code);
+                  setSelected(nextValue);
                   setPendingTemplate(null);
                 }}
               >

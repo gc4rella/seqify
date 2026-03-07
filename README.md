@@ -66,16 +66,20 @@ This project is built with:
 - The app supports offline use after the first successful load (service worker caches the app shell).
 - Clearing site data or using private browsing can remove saved content.
 
-## Local PlantUML rendering
+## Local diagram rendering
 
-Seqify renders diagrams in the browser using PlantUML Core + CheerpJ (no server requests).
+Seqify renders diagrams in the browser (no server requests):
+
+- PlantUML via PlantUML Core + CheerpJ
+- Mermaid via Mermaid.js
+- Diagram type is auto-detected from the current editor content.
 
 To enable local rendering, download these files from the PlantUML Core releases and place them here:
 
 - `public/plantuml-core.jar`
 - `public/plantuml-core.jar.js`
 
-The renderer expects them to be served at `/plantuml-core.jar`.
+The PlantUML renderer expects them to be served at `/plantuml-core.jar`.
 
 CheerpJ for PlantUML has specific licensing requirements (including displaying the Powered by CheerpJ message and logo). Review the PlantUML CheerpJ license before deploying.
 

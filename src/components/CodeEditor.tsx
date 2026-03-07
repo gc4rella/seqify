@@ -4,17 +4,30 @@ import { TemplateSelector } from "./TemplateSelector";
 import { Copy, Check, Download, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ChangeEvent } from "react";
+import type { DiagramType } from "@/lib/diagramType";
 
 interface CodeEditorProps {
   value: string;
   onChange: (value: string) => void;
   style: string;
   onStyleChange: (style: string) => void;
+  diagramType: DiagramType;
 }
 
-export const CodeEditor = ({ value, onChange, style, onStyleChange }: CodeEditorProps) => {
+export const CodeEditor = ({
+  value,
+  onChange,
+  style,
+  onStyleChange,
+  diagramType,
+}: CodeEditorProps) => {
   const [copied, setCopied] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const isPlantuml = diagramType === "plantuml";
+
+  const placeholder = isPlantuml
+    ? "@startuml\nAlice -> Bob: Hello\nBob -> Alice: Hi!\n@enduml"
+    : "sequenceDiagram\nAlice->>Bob: Hello\nBob-->>Alice: Hi!";
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(value);
@@ -24,7 +37,8 @@ export const CodeEditor = ({ value, onChange, style, onStyleChange }: CodeEditor
 
   const handleExport = () => {
     const payload = {
-      version: 1,
+      version: 2,
+      diagramType,
       code: value,
       style,
     };
@@ -48,7 +62,11 @@ export const CodeEditor = ({ value, onChange, style, onStyleChange }: CodeEditor
 
     const text = await file.text();
     try {
-      const parsed = JSON.parse(text) as { code?: string; style?: string };
+      const parsed = JSON.parse(text) as {
+        code?: string;
+        style?: string;
+      };
+
       if (typeof parsed.code === "string") {
         onChange(parsed.code);
         if (typeof parsed.style === "string") {
@@ -73,8 +91,12 @@ export const CodeEditor = ({ value, onChange, style, onStyleChange }: CodeEditor
           <span className="text-primary text-xs">$</span>
           <h1 className="text-sm text-primary font-medium">seqify</h1>
           <span className="text-muted-foreground text-xs">--render</span>
-          <StyleSelector style={style} onStyleChange={onStyleChange} />
-          <TemplateSelector onTemplateSelect={onChange} currentCode={value} />
+          <TemplateSelector
+            onTemplateSelect={onChange}
+            currentCode={value}
+            activeDiagramType={diagramType}
+          />
+          {isPlantuml && <StyleSelector style={style} onStyleChange={onStyleChange} />}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -113,7 +135,7 @@ export const CodeEditor = ({ value, onChange, style, onStyleChange }: CodeEditor
           <input
             ref={importInputRef}
             type="file"
-            accept=".json,.puml,.txt"
+            accept=".json,.puml,.mmd,.txt"
             onChange={handleImportChange}
             className="hidden"
           />
@@ -126,7 +148,7 @@ export const CodeEditor = ({ value, onChange, style, onStyleChange }: CodeEditor
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full h-full px-4 py-2 text-sm bg-transparent border-none focus-visible:ring-0 resize-none text-foreground/90"
-          placeholder="@startuml&#10;Alice -> Bob: Hello&#10;Bob -> Alice: Hi!&#10;@enduml"
+          placeholder={placeholder}
           spellCheck={false}
         />
       </div>
